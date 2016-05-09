@@ -20,6 +20,7 @@ def verify_user(username , password):
 def verify_problem(problem):
 	return mongo_db.check_problem(problem)
 
+
 @app.route('/login' , methods = ['GET' , 'POST'])
 def login():
 	if request.method == 'POST':
@@ -30,6 +31,7 @@ def login():
 		session['user'] = request.form['username']
 		return redirect(url_for('index'))
 	return render_template('login.html' , error = None)
+
 
 def login_required(f):
 	@wraps(f)
@@ -66,9 +68,47 @@ def limit_submissions(ip):
 @app.route('/problems/<problem>/')
 @login_required
 def problems(problem):
-	# if verify_problem(problem) == False:
-	# 	return '<h1> Problem %s does not exist </h1>' %(escape(problem))
+	if verify_problem(problem) == False:
+		return '<h1> Problem %s does not exist </h1>' %(escape(problem))
 	return render_template(problem + '.html' , problem = problem , ip = request.remote_addr)
+
+
+
+def evaluateCode(code , language):
+	inpfile = code + '_input.txt'
+	outfile = str(runID).txt
+	if language == "C++":
+		filename = str(runID) + ".cpp"
+		retval = subprocess.call('g++ ' + filename , shell = True)
+		if retval != 0 :
+			return outfile
+		subprocess.call('./a.out < ' + inpfile + ' > ' + outfile , shell = True)
+		return outfile
+	elif language == "C":
+		filename = str(runID) + ".c"
+		retval = subprocess.call('gcc ' + filename , shell = True)
+		if retval != 0 :
+			return outfile
+		subprocess.call('./a.out < ' + inpfile + ' > ' + outfile , shell = True)
+		return outfile
+	elif language == "Python":
+		filename = str(runID) + ".py"
+		retval = subprocess.call('python ' + filename + ' < ' + inpfile + ' > ' + outfile , shell = True)
+		return outfile
+	return outfile
+
+
+def generate_user_output(code , language):
+	#generate user codes identified by runID
+	outfile = evaluateCode(code , language)
+	return outfile
+
+def generate_correct_output(problem):
+	#find the language in which the problem was written
+	#read the corrent code stored with problemID
+	code = open(problem + '.cpp' , "r")
+	language = "C++"
+	return evaluateCode(code , language)
 
 
 #process the code that has been submitted
@@ -76,6 +116,8 @@ def problems(problem):
 @login_required
 def process():
 	if request.method == "POST":
+		if limit_submissions(request.remote_addr) == False:
+			return '<h1> One Submission Allowed every 10 seconds %s </h1>' %(escape(request.remote_addr))
 		user = session['user']
 		code = request.form['code']
 		language = request.form['language']
@@ -86,24 +128,11 @@ def process():
 	#verify such a problem exists
 	if verify_problem(problem) == False:
 		return '<h1> Problem %s does not exist </h1>' %(escape(problem))
-	generate_user_output()
-	generate_correct_output()
-	verify()
-
-	start = time.time()
-	retval = subprocess.call('python sample.py',shell=True);
-	if retval != 0:
-		try :
-			subprocess.check_output('python sample.py', stderr = subprocess.STDOUT,shell=True);
-		except subprocess.CalledProcessError, e:
-			pass
-		return '<h1> Compilation Error </h1>'
-	print "time elapsed %f" , (time.time() - start)
-	print subprocess.check_output('python sample.py',shell=True)
-	if limit_submissions(request.remote_addr) == False:
-		return '<h1> One Submission Allowed every 10 seconds %s </h1>' %(escape(request.remote_addr))
-	return render_template('child.html' , code = problem , ip = request.remote_addr)
-
+	userOutput = generate_user_output(code , language)
+	correctOutput = generate_correct_output(problem)
+	if verify(userOutput , correctOutput):
+		return '<h1> Correct Solution </h1>'
+	return '<h1> Incorrect Solution </h1>'
 
 @app.route('/')
 def first_page():
@@ -120,3 +149,15 @@ def index():
 
 if __name__ == '__main__':
 	app.run(host = '0.0.0.0' , debug = True)
+
+	# start = time.time()
+	# retval = subprocess.call('python sample.py',shell=True);
+	# if retval != 0:
+	# 	try :
+	# 		subprocess.check_output('python sample.py', stderr = subprocess.STDOUT,shell=True);
+	# 	except subprocess.CalledProcessError, e:
+	# 		pass
+	# 	return '<h1> Compilation Error </h1>'
+	# print "time elapsed %f" , (time.time() - start)
+	# print subprocess.check_output('python sample.py',shell=True)
+	# return render_template('child.html' , code = problem , ip = request.remote_addr)
