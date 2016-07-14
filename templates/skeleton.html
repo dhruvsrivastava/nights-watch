@@ -7,9 +7,11 @@
 	{% block body %} {% endblock %}
 
 	{% block footer %}
-		<form name = "language" action = "{{url_for('process')}}" method="POST">
-
-			<input type="text" style = "height:500px;width:500px" name="code"> </input>
+		<span>	Submit Your Code :</span>
+		<form name = "language" action = "{{url_for('process')}}" method="POST">			
+			<br> 
+			<textarea type="text" name="code" style = "height:500px;width:500px"></textarea> 
+			<br>
 
 			<hr>
 

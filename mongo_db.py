@@ -13,7 +13,17 @@ def get_db():
 	db = client.judge
 	return db
 
+def printAll():
+	print "all"
+	db = get_db()
+	data = db.users.find()
+	for entry in data:
+		print entry
+
 def check(db , x):
+	print "finding" 
+	print x
+	printAll
 	data = db.users.find_one(x)
 	print data
 	if data is None:
@@ -40,10 +50,11 @@ def check_problem(x):
 
 def main():
 	x = {}
-	x['username'] = "dhruv"
-	x['password'] = "passsword"
+	x['username'] = "gaurav"
+	x['password'] = "sharma"
 	db = get_db()
-	print check(db , x)
+	printAll()
+	# print check(db , x)
 	# insert_user(db , x)
 	# query(db)
 
