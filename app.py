@@ -75,7 +75,7 @@ def problems(problem):
 	return render_template('problem.html' , problem = problem , ip = request.remote_addr)
 
 def evaluateCode(problem , runID , language , ext):
-	inpfile = "input/" + problem + ext
+	inpfile = "input/" + problem + ".txt"
 	outfile = "output/" + str(runID) + ".txt"
 	print "creating outfile " , outfile
 	if language == "C++":
@@ -97,14 +97,12 @@ def evaluateCode(problem , runID , language , ext):
 	elif language == "Python":
 		print "running python code"
 		filename = "submissions/" + str(runID) + ".py"
-		try :
-			subprocess.check_output('timeout 1s python ' + filename, stderr = subprocess.STDOUT , shell=True);
-		except subprocess.CalledProcessError, e:
-			print "error"
-			print e.output
-			return (-1 , e.output)
 		start = time.time()
-		retval = subprocess.call('timeout 1s python ' + filename + ' < ' + inpfile + ' > ' + outfile , shell = True)
+		try:
+			subprocess.call('timeout 1s python ' + filename + ' < ' + inpfile + ' > ' + outfile , shell = True)
+		except subprocess.CalledProcessError , e:
+			print e
+			return
 		print "Execution time " , time.time() - start
 	return None
 
