@@ -7,11 +7,15 @@ import subprocess
 import mongo_db
 import time
 import redis
-
+from rq import Queue
+import perform_task
 
 app = Flask(__name__)
 app.redis = redis.StrictRedis(host = 'localhost' , port = 6379 , db = 0)
 app.secret_key = 'secret_session_key'
+
+#redis-queue to process tasks
+q = Queue(connection = redis.StrictRedis())
 
 def verify_user(username , password):
 	x = {}
@@ -74,53 +78,20 @@ def problems(problem):
 		return '<h1> Problem does not exist </h1>'
 	return render_template('problem.html' , problem = problem , ip = request.remote_addr)
 
-def evaluateCode(problem , runID , language , ext):
-	inpfile = "input/" + problem + ".txt"
-	outfile = "output/" + str(runID) + ".txt"
-	print "creating outfile " , outfile
-	if language == "C++":
-		filename = "submissions/" + str(runID) + ".cpp"
-		try :
-			subprocess.check_output('g++ ' + filename, stderr = subprocess.STDOUT , shell=True);
-		except subprocess.CalledProcessError, e:
-			return (-1 , e.output)
-		retval = subprocess.call('g++ ' + filename , shell = True)
-		subprocess.call('timeout 1s ./a.out < ' + inpfile + ' > ' + outfile , shell = True)
-	elif language == "C":
-		filename = "submissions/" + str(runID) + ".c"
-		try :
-			subprocess.check_output('gcc ' + filename, stderr = subprocess.STDOUT , shell=True);
-		except subprocess.CalledProcessError, e:
-			return (-1 , e.output)
-		retval = subprocess.call('gcc ' + filename , shell = True)
-		subprocess.call('timeout 1s ./a.out < ' + inpfile + ' > ' + outfile , shell = True)
-	elif language == "Python":
-		print "running python code"
-		filename = "submissions/" + str(runID) + ".py"
-		start = time.time()
-		try:
-			subprocess.call('timeout 1s python ' + filename + ' < ' + inpfile + ' > ' + outfile , shell = True)
-		except subprocess.CalledProcessError , e:
-			print e
-			return
-		print "Execution time " , time.time() - start
-	return None
+@app.route('/api/enqueue')
+def enqueue():
+	job = q.enqueue(perform_task.special_task)
+	return '<h1> Task processed with ID %s </h1>' %(job.id)
 
-def generate_user_output(runID , code , language , problem):
-	#generate user code identified by runID
-	ext = ""
-	if language == "Python":
-		ext = ".py"
-	elif language == "C++":
-		ext = ".cpp"
-	elif language == "C":
-		ext = ".c"
-	print "Creating " + "submissions/" + str(runID) + ext
-	f = open("submissions/" + str(runID) + ext , "w")
-	f.write(code)
-	f.close()
-	evaluateCode(problem , runID , language , ext)
-	return
+@app.route('/api/active')
+def active():
+	jobs = q.jobs
+	queued_job_ids = q.job_ids # Gets a list of job IDs from the queue
+	print "number of jobs %d" %(len(q.jobs))
+	res = []
+	for job in jobs:
+		res.append( (job.id , job.status) )
+	return render_template('active.html' , res = res)
 
 
 #process the code that has been submitted
@@ -147,24 +118,9 @@ def process():
 		runID = app.redis.hget('judge' , 'runID')
 		app.redis.hincrby('judge' , 'runID' , 1)
 
-		ret = generate_user_output(runID , code , language , problem)
-		print ret
-		if ret is not None:
-			return '<h1> Compilation Error </h1>'
-		f1 = open("output/" + str(runID) + ".txt" , "r")
-		f2 = open("output/" + problem + ".txt" , "r")
-		print "user output"
-		v1 =  f1.read()
-		v2 = f2.read()
-		print v1
-		print "V2" 
-		print v2
-		if v1 == v2:
-			print "equal"
-			print v1
-			print v2
-			return '<h1> Correct Solution </h1>'
-		return '<h1> Incorrect Solution </h1>'
+		job = q.enqueue(perform_task.handle_everything , args = (runID , code , language , problem))
+		return '<h1> Task processed with ID %s </h1>' %(job.id)
+	return '<h1> POST request required </h1>'
 
 @app.route('/')
 def first_page():

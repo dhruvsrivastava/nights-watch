@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title> List of Active Jobs </title>
+</head>
+<body>
+	{% for item in res %}
+		<p> {{item[0]}} </p>
+		<p> {{item[1]}}</p>
+		<hr>
+	{% endfor %}
+</body>
+</html>
