@@ -78,6 +78,7 @@ def problems(problem):
 		return '<h1> Problem does not exist </h1>'
 	return render_template('problem.html' , problem = problem , ip = request.remote_addr)
 
+<<<<<<< HEAD
 @app.route('/api/enqueue')
 def enqueue():
 	job = q.enqueue(perform_task.special_task)
@@ -92,6 +93,55 @@ def active():
 	for job in jobs:
 		res.append( (job.id , job.status) )
 	return render_template('active.html' , res = res)
+=======
+def evaluateCode(problem , runID , language , ext):
+	inpfile = "input/" + problem + ".txt"
+	outfile = "output/" + str(runID) + ".txt"
+	print "creating outfile " , outfile
+	if language == "C++":
+		filename = "submissions/" + str(runID) + ".cpp"
+		try :
+			subprocess.check_output('g++ ' + filename, stderr = subprocess.STDOUT , shell=True);
+		except subprocess.CalledProcessError, e:
+			return (-1 , e.output)
+		retval = subprocess.call('g++ ' + filename , shell = True)
+		subprocess.call('timeout 1s ./a.out < ' + inpfile + ' > ' + outfile , shell = True)
+	elif language == "C":
+		filename = "submissions/" + str(runID) + ".c"
+		try :
+			subprocess.check_output('gcc ' + filename, stderr = subprocess.STDOUT , shell=True);
+		except subprocess.CalledProcessError, e:
+			return (-1 , e.output)
+		retval = subprocess.call('gcc ' + filename , shell = True)
+		subprocess.call('timeout 1s ./a.out < ' + inpfile + ' > ' + outfile , shell = True)
+	elif language == "Python":
+		print "running python code"
+		filename = "submissions/" + str(runID) + ".py"
+		start = time.time()
+		try:
+			subprocess.call('timeout 1s python ' + filename + ' < ' + inpfile + ' > ' + outfile , shell = True)
+		except subprocess.CalledProcessError , e:
+			print e
+			return
+		print "Execution time " , time.time() - start
+	return None
+
+def generate_user_output(runID , code , language , problem):
+	#generate user code identified by runID
+	ext = ""
+	if language == "Python":
+		ext = ".py"
+	elif language == "C++":
+		ext = ".cpp"
+	elif language == "C":
+		ext = ".c"
+	print "Creating " + "submissions/" + str(runID) + ext
+	f = open("submissions/" + str(runID) + ext , "w")
+	f.write(code)
+	f.close()
+	evaluateCode(problem , runID , language , ext)
+	return
+>>>>>>> 6f390d89bff188ec1c0ccedcd369b7e0b808b654
 
 
 #process the code that has been submitted
