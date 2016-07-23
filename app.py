@@ -78,7 +78,6 @@ def problems(problem):
 		return '<h1> Problem does not exist </h1>'
 	return render_template('problem.html' , problem = problem , ip = request.remote_addr)
 
-<<<<<<< HEAD
 @app.route('/api/enqueue')
 def enqueue():
 	job = q.enqueue(perform_task.special_task)
@@ -93,7 +92,7 @@ def active():
 	for job in jobs:
 		res.append( (job.id , job.status) )
 	return render_template('active.html' , res = res)
-=======
+
 def evaluateCode(problem , runID , language , ext):
 	inpfile = "input/" + problem + ".txt"
 	outfile = "output/" + str(runID) + ".txt"
@@ -141,8 +140,6 @@ def generate_user_output(runID , code , language , problem):
 	f.close()
 	evaluateCode(problem , runID , language , ext)
 	return
->>>>>>> 6f390d89bff188ec1c0ccedcd369b7e0b808b654
-
 
 #process the code that has been submitted
 @app.route('/process' , methods = ['GET' , 'POST'])
